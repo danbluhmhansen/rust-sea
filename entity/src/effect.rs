@@ -4,26 +4,30 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "player_character")]
+#[sea_orm(table_name = "effect")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
-    pub name: String,
+    pub feature_id: Uuid,
+    pub path: String,
+    pub value: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::feature::Entity",
+        from = "Column::FeatureId",
+        to = "super::feature::Column::Id",
+        on_update = "Cascade",
+        on_delete = "Cascade"
+    )]
+    Feature,
+}
 
 impl Related<super::feature::Entity> for Entity {
     fn to() -> RelationDef {
-        super::character_feature::Relation::Feature.def()
-    }
-    fn via() -> Option<RelationDef> {
-        Some(
-            super::character_feature::Relation::PlayerCharacter
-                .def()
-                .rev(),
-        )
+        Relation::Feature.def()
     }
 }
 

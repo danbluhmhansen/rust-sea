@@ -2,5 +2,8 @@
 
 pub mod prelude;
 
-pub mod character_effect;
+pub mod character_feature;
+pub mod effect;
+pub mod feature;
 pub mod player_character;
+pub mod sea_orm_active_enums;
