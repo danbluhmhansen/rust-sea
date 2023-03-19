@@ -12,7 +12,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub feature_id: Uuid,
     pub time_stamp: DateTime,
-    pub event: Option<CharacterFeatureEvent>,
+    pub event: CharacterFeatureEvent,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

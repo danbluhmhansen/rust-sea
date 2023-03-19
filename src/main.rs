@@ -1,6 +1,9 @@
 use std::{env, error::Error};
 
-use entity::{character_effect, player_character};
+use entity::{
+    character_feature, effect, feature, player_character,
+    sea_orm_active_enums::CharacterFeatureEvent,
+};
 use migration::DbErr;
 use sea_orm::{ActiveModelTrait, Set, TransactionTrait};
 use uuid::Uuid;
@@ -11,41 +14,48 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let db = sea_orm::Database::connect(env::var("DATABASE_URL")?).await?;
 
-    let (_char, _eff_str, _eff_dexx) = db
-        .transaction::<_, (
-            player_character::Model,
-            character_effect::Model,
-            character_effect::Model,
-        ), DbErr>(|txn| {
-            Box::pin(async move {
-                let char_id = Uuid::new_v4();
-                let char = player_character::ActiveModel {
-                    id: Set(char_id),
-                    name: Set("Foo".to_string()),
-                    ..Default::default()
-                };
+    db.transaction::<_, (), DbErr>(|txn| {
+        Box::pin(async move {
+            let feat_id = Uuid::new_v4();
+            feature::ActiveModel {
+                id: Set(feat_id),
+                name: Set("Dwarf".to_string()),
+                ..Default::default()
+            }
+            .insert(txn)
+            .await?;
 
-                let eff_str = character_effect::ActiveModel {
-                    character_id: Set(char_id),
-                    key: Set("strength".to_string()),
-                    value: Set(16),
-                    ..Default::default()
-                };
-                let eff_dex = character_effect::ActiveModel {
-                    character_id: Set(char_id),
-                    key: Set("dexterity".to_string()),
-                    value: Set(14),
-                    ..Default::default()
-                };
+            effect::ActiveModel {
+                feature_id: Set(feat_id),
+                path: Set("strength".to_string()),
+                value: Set(2),
+                ..Default::default()
+            }
+            .insert(txn)
+            .await?;
 
-                let fut_char = char.insert(txn);
-                let fut_eff_str = eff_str.insert(txn);
-                let fut_eff_dex = eff_dex.insert(txn);
+            let char_id = Uuid::new_v4();
+            player_character::ActiveModel {
+                id: Set(char_id),
+                name: Set("Foo".to_string()),
+                ..Default::default()
+            }
+            .insert(txn)
+            .await?;
 
-                Ok((fut_char.await?, fut_eff_str.await?, fut_eff_dex.await?))
-            })
+            character_feature::ActiveModel {
+                character_id: Set(char_id),
+                feature_id: Set(feat_id),
+                event: Set(CharacterFeatureEvent::Added),
+                ..Default::default()
+            }
+            .insert(txn)
+            .await?;
+
+            Ok(())
         })
-        .await?;
+    })
+    .await?;
 
     Ok(())
 }
