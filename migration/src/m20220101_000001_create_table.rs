@@ -15,6 +15,7 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(PlayerCharacter::Id)
                             .uuid()
                             .not_null()
+                            .default(PgFunc::get_random_uuid())
                             .primary_key(),
                     )
                     .col(ColumnDef::new(PlayerCharacter::Name).string().not_null())
@@ -31,6 +32,7 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(CharacterEffect::Id)
                             .uuid()
                             .not_null()
+                            .default(PgFunc::get_random_uuid())
                             .primary_key(),
                     )
                     .col(
