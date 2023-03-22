@@ -5,7 +5,9 @@ use entity::{
     sea_orm_active_enums::CharacterFeatureEvent,
 };
 use migration::DbErr;
-use sea_orm::{ActiveModelTrait, Set, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ConnectionTrait, DatabaseBackend, Set, Statement, TransactionTrait,
+};
 use uuid::Uuid;
 
 #[tokio::main]
@@ -13,6 +15,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
     dotenvy::dotenv()?;
 
     let db = sea_orm::Database::connect(env::var("DATABASE_URL")?).await?;
+
+    db.execute(Statement::from_string(
+        DatabaseBackend::Postgres,
+        r#"
+            CREATE MATERIALIZED VIEW PLAYER_CHARACTER_AGGREGATE AS
+            SELECT PLAYER_CHARACTER.ID,
+            	PLAYER_CHARACTER."name",
+            	SUM(CASE
+            			WHEN EFFECT.PATH = 'strength' THEN EFFECT."value"
+            			ELSE 0
+            		END) STRENGTH
+            FROM PLAYER_CHARACTER
+            LEFT JOIN CHARACTER_FEATURE ON CHARACTER_FEATURE.CHARACTER_ID = PLAYER_CHARACTER.ID
+            LEFT JOIN FEATURE ON FEATURE.ID = CHARACTER_FEATURE.FEATURE_ID
+            LEFT JOIN EFFECT ON EFFECT.FEATURE_ID = FEATURE.ID
+            GROUP BY PLAYER_CHARACTER.ID;
+        "#
+        .to_string(),
+    ))
+    .await?;
 
     db.transaction::<_, (), DbErr>(|txn| {
         Box::pin(async move {
